@@ -1,0 +1,138 @@
+services:
+  nginx:
+    container_name: nginx
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+      no_cache: false
+    depends_on:
+      - django
+    ports:
+      - 8080:443
+    volumes:
+      - cli_data:/app/config
+    restart: always
+    env_file:
+     - .env
+    networks:
+      - network
+
+  django:
+    container_name: django
+    build:
+      context: ./django
+      dockerfile: Dockerfile
+      no_cache: false
+    restart: always
+    env_file:
+     - .env
+    ports:
+      - 8000:8000
+    volumes:
+      - django_data:/app
+    networks:
+      - network
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: transdb
+      POSTGRES_USER: ${DB_LOG}
+      POSTGRES_PASSWORD: ${DB_PWD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - network
+
+  ganache:
+    container_name: ganache
+    build:
+      context: ./ganache
+      dockerfile: Dockerfile
+    env_file:
+     - .env
+    ports:
+      - "8545:8545"
+    volumes:
+      - ganache_db:/ganache_db
+    networks:
+      - network
+
+
+  blockchain:
+    container_name: blockchain
+    build:
+      context: ./blockchain
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "9000:9000"
+    volumes:
+      - blockchain_data:/app
+    networks:
+      - network
+    # profiles:
+    # - donotstart
+
+  ai:
+    container_name: ai
+    build:
+      context: ./ai
+      dockerfile: Dockerfile
+      no_cache: false
+    restart: always
+    env_file:
+     - .env
+    ports:
+      - 5000:5000
+    networks:
+      - network
+
+  redis:
+    container_name: redis
+    build:
+      context: ./redis
+      dockerfile: Dockerfile
+      no_cache: false
+    privileged: true
+    restart: always
+    env_file:
+     - .env
+    ports:
+      - 5379:5379
+    networks:
+      - network
+
+volumes:
+  django_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./
+      o: bind
+
+  postgres_data:
+  cli_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./backend/CLI
+      o: bind
+
+  ganache_db:
+
+  blockchain_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./
+      o: bind
+
+networks:
+  network:
+    driver: bridge
